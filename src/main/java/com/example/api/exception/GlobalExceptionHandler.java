@@ -40,20 +40,25 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getFieldErrors().forEach((err) -> {
-            errors.put(err.getField(), err.getDefaultMessage());
-        });
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
+        
+        // Cách viết tốt nhất: Vừa sạch bằng Stream, vừa tường minh cho Frontend đọc lỗi
+        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+    
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(ex.getMessage())
+                .message(errorMessage)
                 .path(request.getRequestURI())
                 .build();
+                
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
